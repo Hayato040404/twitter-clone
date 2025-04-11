@@ -9,14 +9,23 @@ export async function GET(req: NextRequest) {
   const tweets = userId
     ? Array.from(memoryStore.tweets.values()).filter((t) => t.userId === userId)
     : Array.from(memoryStore.tweets.values());
-  return NextResponse.json(
-    tweets
-      .map((t) => ({
+
+  const enrichedTweets = tweets
+    .map((t) => {
+      const user = memoryStore.users.get(t.userId);
+      if (!user) {
+        // ユーザーが見つからない場合はスキップ
+        return null;
+      }
+      return {
         ...t,
-        user: memoryStore.users.get(t.userId),
-      }))
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-  );
+        user,
+      };
+    })
+    .filter((t) => t !== null) // null を除外
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  return NextResponse.json(enrichedTweets);
 }
 
 export async function POST(req: NextRequest) {
@@ -39,7 +48,7 @@ export async function POST(req: NextRequest) {
   const tweet = {
     id,
     userId: session.user.id,
-    user, // user プロパティを追加
+    user,
     content,
     image,
     likes: [],
