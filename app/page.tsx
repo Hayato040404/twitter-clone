@@ -5,14 +5,24 @@ export const dynamic = "force-dynamic";
 import TweetCard from "@/components/TweetCard";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [tweets, setTweets] = useState([]);
   const [error, setError] = useState(null);
   const [content, setContent] = useState("");
   const [image, setImage] = useState("");
+  const router = useRouter();
 
+  // 未ログイン時にリダイレクト
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+    }
+  }, [status, router]);
+
+  // ツイート取得
   useEffect(() => {
     const fetchTweets = async () => {
       try {
@@ -26,8 +36,10 @@ export default function Home() {
         setError("Error loading tweets");
       }
     };
-    fetchTweets();
-  }, []);
+    if (status === "authenticated") {
+      fetchTweets();
+    }
+  }, [status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +54,6 @@ export default function Home() {
       }
       setContent("");
       setImage("");
-      // ツイートを再取得
       const updatedTweets = await fetch("/api/tweet").then((res) => res.json());
       setTweets(updatedTweets);
     } catch (err) {
@@ -50,39 +61,51 @@ export default function Home() {
     }
   };
 
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
+
   if (error) {
     return <div>{error}</div>;
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Home</h1>
+    <div>
+      {/* ヘッダー */}
+      <header className="sticky top-0 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-700 p-4">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Home</h1>
+      </header>
+      {/* ツイート投稿欄 */}
       {session && (
-        <form onSubmit={handleSubmit} className="mb-4">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="What's happening?"
-            className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
-          />
-          <input
-            type="text"
-            value={image}
-            onChange={(e) => setImage(e.target.value)}
-            placeholder="Image URL (optional)"
-            className="w-full p-2 border rounded mt-2 dark:bg-gray-800 dark:border-gray-700"
-          />
-          <button
-            type="submit"
-            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded"
-          >
-            Tweet
-          </button>
-        </form>
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <form onSubmit={handleSubmit}>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="What's happening?"
+              className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700 resize-none"
+              rows={3}
+            />
+            <input
+              type="text"
+              value={image}
+              onChange={(e) => setImage(e.target.value)}
+              placeholder="Image URL (optional)"
+              className="w-full p-2 border rounded mt-2 dark:bg-gray-800 dark:border-gray-700"
+            />
+            <button
+              type="submit"
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-full"
+            >
+              Tweet
+            </button>
+          </form>
+        </div>
       )}
+      {/* ツイート一覧 */}
       <div>
         {tweets.length === 0 ? (
-          <p>No tweets yet.</p>
+          <p className="p-4 text-gray-500">No tweets yet.</p>
         ) : (
           tweets.map((tweet) => (
             <TweetCard key={tweet.id} tweet={tweet} />
