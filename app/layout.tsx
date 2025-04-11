@@ -1,6 +1,8 @@
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { SessionProvider } from "next-auth/react";
-import Sidebar from "@/components/Sidebar";
+import SessionWrapper from "@/components/SessionWrapper";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "Twitter Clone",
@@ -13,12 +15,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
-      <body className="min-h-screen flex">
-        <SessionProvider>
-          <Sidebar />
-          <main className="flex-1 container">{children}</main>
-        </SessionProvider>
+    <html lang="en">
+      <body className={inter.className}>
+        <SessionWrapper>{children}</SessionWrapper>
       </body>
     </html>
   );
