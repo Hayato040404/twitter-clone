@@ -1,29 +1,36 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { memoryStore } from "@/lib/memoryStore";
-import { authOptions } from "../auth/[...nextauth]/route";
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { targetUserId } = await request.json();
+
+  const { targetUserId } = await req.json();
   const user = memoryStore.users.get(session.user.id);
-  const target = memoryStore.users.get(targetUserId);
-  if (!user || !target) {
+  const targetUser = memoryStore.users.get(targetUserId);
+
+  if (!user || !targetUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-  if (!user.following.includes(targetUserId)) {
-    user.following.push(targetUserId);
-    target.followers.push(session.user.id);
-    memoryStore.notifications.set(Math.random().toString(36).slice(2), {
-      id: Math.random().toString(36).slice(2),
+
+  user.following.push(targetUserId);
+  targetUser.followers.push(session.user.id);
+  memoryStore.users.set(session.user.id, user);
+  memoryStore.users.set(targetUserId, targetUser);
+
+  if (session.user.id !== targetUserId) {
+    memoryStore.notifications.set(targetUserId, {
+      id: Date.now().toString(),
       userId: targetUserId,
       type: "follow",
-      fromUserId: session.user.id,
+      fromUser: user, // fromUserId から fromUser に変更
       createdAt: new Date(),
     });
   }
-  return NextResponse.json({ message: "Followed" });
+
+  return NextResponse.json({ message: "Followed successfully" });
 }
