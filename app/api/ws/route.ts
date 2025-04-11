@@ -1,56 +1,43 @@
-import { Server } from "ws";
+import { WebSocketServer } from "ws";
 import { memoryStore } from "@/lib/memoryStore";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request, { params }: { params: any }) {
-  const { socket, response } = (req as any).raw;
+export const GET = () => {
+  const wss = new WebSocketServer({ noServer: true });
 
-  if (!socket.server.wss) {
-    const wss = new Server({ noServer: true });
-    socket.server.wss = wss;
+  wss.on("connection", (ws) => {
+    ws.on("message", (message) => {
+      const { type, data } = JSON.parse(message.toString());
+      if (type === "message") {
+        const newMessage = {
+          id: Date.now().toString(),
+          senderId: data.senderId,
+          receiverId: data.receiverId,
+          content: data.content,
+          createdAt: new Date(),
+        };
+        memoryStore.messages.set(newMessage.id, newMessage);
 
-    wss.on("connection", (ws) => {
-      ws.on("message", (message) => {
-        try {
-          const { senderId, receiverId, content } = JSON.parse(message.toString());
-          const id = Math.random().toString(36).slice(2);
-          memoryStore.messages.set(id, {
-            id,
-            senderId,
-            receiverId,
-            content,
-            createdAt: new Date(),
-          });
-          memoryStore.notifications.set(Math.random().toString(36).slice(2), {
-            id: Math.random().toString(36).slice(2),
-            userId: receiverId,
-            type: "dm",
-            fromUserId: senderId,
-            createdAt: new Date(),
-          });
-          wss.clients.forEach((client) => {
-            if (client.readyState === ws.OPEN) {
-              client.send(
-                JSON.stringify({
-                  type: "message",
-                  data: { id, senderId, receiverId, content },
-                })
-              );
-            }
-          });
-        } catch (e) {
-          console.error("WebSocket error:", e);
-        }
-      });
+        // クライアントにメッセージを送信
+        wss.clients.forEach((client) => {
+          if (client.readyState === 1) {
+            client.send(JSON.stringify({ type: "message", data: newMessage }));
+          }
+        });
+
+        // 通知を作成
+        const notification = {
+          id: Date.now().toString(),
+          userId: data.receiverId,
+          type: "dm",
+          fromUser: memoryStore.users.get(data.senderId)!,
+          createdAt: new Date(),
+        };
+        memoryStore.notifications.set(notification.id, notification);
+      }
     });
+  });
 
-    socket.server.on("upgrade", (request: any, socket: any, head: any) => {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit("connection", ws, request);
-      });
-    });
-  }
-
-  return new Response(null, { status: 101 });
-}
+  return new Response("WebSocket server started", { status: 200 });
+};
