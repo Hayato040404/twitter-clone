@@ -15,6 +15,7 @@ export interface Tweet {
   userId: string;
   user: User;
   content: string;
+  image?: string; // image プロパティを追加（オプショナル）
   likes: string[];
   retweets: string[];
   createdAt: Date;
@@ -32,6 +33,6 @@ export interface Notification {
   id: string;
   userId: string;
   type: string;
-  fromUser: User; // fromUserId から fromUser に変更
+  fromUser: User;
   createdAt: Date;
 }
