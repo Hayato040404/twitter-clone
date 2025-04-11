@@ -1,54 +1,72 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { memoryStore } from "@/lib/memoryStore";
-import { authOptions } from "../auth/[...nextauth]/route";
 
-export async function POST(request: Request) {
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get("userId");
+  const tweets = userId
+    ? Array.from(memoryStore.tweets.values()).filter((t) => t.userId === userId)
+    : Array.from(memoryStore.tweets.values());
+  return NextResponse.json(
+    tweets
+      .map((t) => ({
+        ...t,
+        user: memoryStore.users.get(t.userId),
+      }))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  );
+}
+
+export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { content, image } = await request.json();
-  if (!content || content.length > 280) {
-    return NextResponse.json({ error: "Invalid content" }, { status: 400 });
+
+  const { content, image } = await req.json();
+  if (!content) {
+    return NextResponse.json({ error: "Content is required" }, { status: 400 });
   }
+
+  const user = memoryStore.users.get(session.user.id);
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
   const id = Math.random().toString(36).slice(2);
-  memoryStore.tweets.set(id, {
+  const tweet = {
     id,
     userId: session.user.id,
+    user, // user プロパティを追加
     content,
     image,
     likes: [],
     retweets: [],
     createdAt: new Date(),
-  });
-  // メンション通知
-  const mentions = content.match(/@[^\s@]+/g) || [];
-  for (const mention of mentions) {
-    const username = mention.slice(1);
-    const mentionedUser = Array.from(memoryStore.users.values()).find(
-      (u) => u.username === username
-    );
-    if (mentionedUser) {
-      memoryStore.notifications.set(Math.random().toString(36).slice(2), {
-        id: Math.random().toString(36).slice(2),
-        userId: mentionedUser.id,
-        type: "mention",
-        fromUserId: session.user.id,
-        tweetId: id,
-        createdAt: new Date(),
-      });
-    }
-  }
+  };
+  memoryStore.tweets.set(id, tweet);
   return NextResponse.json({ message: "Tweet posted" });
 }
 
-export async function GET() {
-  const tweets = Array.from(memoryStore.tweets.values()).map((tweet) => ({
-    ...tweet,
-    user: memoryStore.users.get(tweet.userId),
-  }));
-  return NextResponse.json(
-    tweets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-  );
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const tweetId = searchParams.get("tweetId");
+  const tweet = memoryStore.tweets.get(tweetId!);
+  if (!tweet) {
+    return NextResponse.json({ error: "Tweet not found" }, { status: 404 });
+  }
+
+  if (tweet.userId !== session.user.id && !session.user.isAdmin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  memoryStore.tweets.delete(tweetId!);
+  return NextResponse.json({ message: "Tweet deleted" });
 }
