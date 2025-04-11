@@ -1,4 +1,6 @@
-export default function NotificationItem({ notification }: { notification: any }) {
+import { Notification } from "@/types";
+
+export default function NotificationItem({ notification }: { notification: Notification }) {
   return (
     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
       {notification.type === "like" && (
