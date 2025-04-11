@@ -20,7 +20,9 @@
     "react": "^18",
     "react-dom": "^18",
     "swr": "^2.1.5",
-    "tailwindcss-postcss": "^2.0.0",
+    "tailwindcss": "^3.3.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.0.1",
     "ws": "^8.13.0",
     "zustand": "^4.3.8"
   },
@@ -30,11 +32,8 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/ws": "^8.5.4",
-    "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.0.0",
-    "postcss": "^8",
-    "tailwindcss": "^3.3.0",
     "typescript": "^5"
   }
 }
