@@ -1,9 +1,9 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions, Session, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { memoryStore } from "@/lib/memoryStore";
 import { compare } from "bcrypt";
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -27,7 +27,7 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
+    async session({ session, user }: { session: Session; user: User }) {
       const dbUser = Array.from(memoryStore.users.values()).find(
         (u) => u.email === session.user.email
       );
@@ -38,6 +38,7 @@ export const authOptions = {
       return session;
     },
   },
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
