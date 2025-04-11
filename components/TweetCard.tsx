@@ -1,9 +1,8 @@
-"use client";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { HeartIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { Tweet } from "@/types";
 
-export default function TweetCard({ tweet }: { tweet: any }) {
+export default function TweetCard({ tweet }: { tweet: Tweet }) {
   const { data: session } = useSession();
 
   const handleLike = async () => {
@@ -23,68 +22,60 @@ export default function TweetCard({ tweet }: { tweet: any }) {
   };
 
   const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this tweet?")) {
-      await fetch("/api/admin/delete-tweet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tweetId: tweet.id }),
-      });
-    }
+    await fetch(`/api/tweet?tweetId=${tweet.id}`, { method: "DELETE" });
   };
 
   return (
     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-      <div className="flex space-x-3">
-        <img
-          src={`https://via.placeholder.com/48?text=${tweet.user.username[0]}`}
-          alt="Avatar"
-          className="w-12 h-12 rounded-full"
-        />
-        <div className="flex-1">
-          <div className="flex items-center space-x-1">
-            <Link href={`/profile/${tweet.user.id}`}>
-              <span className="font-bold hover:underline">
-                {tweet.user.username}
-              </span>
-            </Link>
+      <div className="flex items-start space-x-3">
+        <div>
+          <Link href={`/profile/${tweet.user.id}`}>
+            <span className="font-bold">{tweet.user.username}</span>
             {tweet.user.isAdmin && (
-              <svg className="w-4 h-4 text-twitter" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M9 16.2l-3.5-3.5 1.4-1.4L9 13.4l8.1-8.1 1.4 1.4L9 16.2z"
-                />
-              </svg>
+              <span className="ml-2 text-blue-500">✔</span>
             )}
-            <span className="text-gray-500 text-sm">
-              {new Date(tweet.createdAt).toLocaleString()}
-            </span>
-          </div>
-          <p className="mt-1">{tweet.content}</p>
-          <div className="flex space-x-4 mt-2">
-            <button
-              onClick={handleLike}
-              className="flex items-center space-x-1 text-gray-500 hover:text-red-500"
-            >
-              <HeartIcon className="w-5 h-5" />
-              <span>{tweet.likes.length}</span>
-            </button>
-            <button
-              onClick={handleRetweet}
-              className="flex items-center space-x-1 text-gray-500 hover:text-green-500"
-            >
-              <ArrowPathIcon className="w-5 h-5" />
-              <span>{tweet.retweets.length}</span>
-            </button>
-            {session?.user.isAdmin && (
-              <button
-                onClick={handleDelete}
-                className="text-red-500 hover:underline"
-              >
-                Delete
-              </button>
-            )}
-          </div>
+          </Link>
+          <span className="text-gray-500 text-sm ml-2">
+            {new Date(tweet.createdAt).toLocaleString()}
+          </span>
         </div>
+      </div>
+      <p className="mt-2">{tweet.content}</p>
+      {tweet.image && (
+        <img
+          src={tweet.image}
+          alt="Tweet image"
+          className="mt-2 max-w-full h-auto rounded-lg"
+        />
+      )}
+      <div className="flex space-x-4 mt-2">
+        <button
+          onClick={handleLike}
+          className={`flex items-center space-x-1 ${
+            tweet.likes.includes(session?.user?.id ?? "")
+              ? "text-red-500"
+              : "text-gray-500"
+          }`}
+        >
+          <span>❤️</span>
+          <span>{tweet.likes.length}</span>
+        </button>
+        <button
+          onClick={handleRetweet}
+          className={`flex items-center space-x-1 ${
+            tweet.retweets.includes(session?.user?.id ?? "")
+              ? "text-green-500"
+              : "text-gray-500"
+          }`}
+        >
+          <span>🔄</span>
+          <span>{tweet.retweets.length}</span>
+        </button>
+        {(tweet.userId === session?.user?.id || session?.user?.isAdmin) && (
+          <button onClick={handleDelete} className="text-red-500">
+            🗑️
+          </button>
+        )}
       </div>
     </div>
   );
