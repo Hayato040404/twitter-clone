@@ -4,7 +4,7 @@ export interface User {
   email: string;
   passwordHash?: string;
   isAdmin: boolean;
-  isBanned?: boolean;
+  isBanned: boolean;
   followers: string[];
   following: string[];
   createdAt: Date;
@@ -13,8 +13,8 @@ export interface User {
 export interface Tweet {
   id: string;
   userId: string;
+  user: User;
   content: string;
-  image?: string;
   likes: string[];
   retweets: string[];
   createdAt: Date;
@@ -31,8 +31,7 @@ export interface Message {
 export interface Notification {
   id: string;
   userId: string;
-  type: "like" | "retweet" | "follow" | "dm" | "mention";
-  fromUserId: string;
-  tweetId?: string;
+  type: string;
+  fromUser: User; // fromUserId から fromUser に変更
   createdAt: Date;
 }
